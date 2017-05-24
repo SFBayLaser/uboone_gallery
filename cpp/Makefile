@@ -13,7 +13,7 @@ CPPFLAGS=-I $(BOOST_INC) \
          -I $(NUSIMDATA_INC) \
          -I $(ROOT_INC)
 
-CXXFLAGS=-std=c++14 -Wall -Werror -pedantic
+CXXFLAGS=-std=c++14 -Wall -Werror -pedantic -g -gdwarf-2
 CXX=g++
 LDFLAGS=$$(root-config --libs) \
         -L $(CANVAS_LIB) -l canvas \
@@ -24,11 +24,26 @@ LDFLAGS=$$(root-config --libs) \
         -L $(LARCOREOBJ_LIB) -l larcoreobj_SummaryData \
         -L $(LARDATAOBJ_LIB) -l lardataobj_RecoBase -l lardataobj_MCBase -l lardataobj_RawData -l lardataobj_OpticalDetectorData -l lardataobj_AnalysisBase
 
+LDANALYSIS=-L . -l AnalysisObjects
+
 demo_ReadEvent: demo_ReadEvent.cc
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $<
 
 HitAna: HitAna.cc
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $<
+
+SRCS = BasicHitAnalysis.cxx
+OBJS = $(SRCS:.cxx=.o)
+TARGET_LIB = libAnalysisObjects.so
+
+$(TARGET_LIB): $(OBJS)
+	$(CXX) -shared $^ $(LDFLAGS) -o $@
+
+%.o:%.cxx
+	$(CXX) $(CPPFLAGS) -fPIC -g -c $^ -o $@
+
+MainAnalysis: MainAnalysis.cc
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDANALYSIS) $(LDFLAGS) -o $@ $<
 
 ROIAna: ROIAna.cc
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $<
@@ -36,7 +51,7 @@ ROIAna: ROIAna.cc
 NeutrinoIDFilterPass: NeutrinoIDFilterPass.cc
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $<
 
-all: demo_ReadEvent HitAna NeutrinoIDFilterPass ROIAna
+all: ${TARGET_LIB} demo_ReadEvent HitAna MainAnalysis NeutrinoIDFilterPass ROIAna
 
 clean:
 	rm *.o demo_ReadEvent HitAna
